@@ -61,6 +61,26 @@ k8s 对网络提出了三个基本要求
 下面的这个要求仅针对支持 `HostNetwork` 模式的平台，如 linux
 - pods in the host network of a node can communicate with all pods on all nodes without NAT ( 节点上的 hostnetwork POD 不需要通过 NAT 就可以与其他任意节点的 POD 通信 )
 
+实现了这些要求的技术方案有很多，可以参考 [集群网络系统](https://kubernetes.io/zh/docs/concepts/cluster-administration/networking/)，这里列举几个比较知名的开源方案：
+- Flannel
+- Calico
+
+各大云厂商也都实现这些网络要求以提供 k8s 集群的网络资源需求，由于云厂商在提供容器服务之前基本都有了自己的虚拟化技术而且基本都类似，所以他们都是基于各自的 VPC 网络模型来实现 k8s 的网络方案，比如：
+- Google: Google Compute Engine (GCE), 详细情况未知
+![Aliyun](/image/k8s-notes/gce.jpg)
+- AWS: AWS VPC CNI, 类似 Tencent VPC CNI
+![Aliyun](/image/k8s-notes/aws.jpg)
+- Azure: Azure CNI, 详细情况未知
+- Aliyun: Terway，类似 Tencent VPC CNI，兼容  Flannel
+![Aliyun](/image/k8s-notes/ali.jpg)
+- Tencent:
+  + Global Router: 使用 Overay 的技术建立的容器网路，母机 和 POD 网络互通，但是由于 Overlay 建立在 VPC 下，因此容器不能访问到不同 VPC 下的 POD。
+  [vpc-cni](/image/k8s-notes/gr.jpg)
+  + VPC CNI: POD 和 母机 在一个网络平面，这个模式下 POD 和 母机以及 不同 VPC 下的母机都是互通的。
+    ![vpc-cni-new](/image/k8s-notes/vpc-cni.jpg)
+  + VPC CNI 独立网卡模式: VPC CNI 母机上的 POD 都共用母机的 ENI，新一代的 VPC-CNI 直接将弹性网卡绑定到了 POD 网络命名空间，让其独享 ENi，在实践过程中来看，这个模式提高了网络稳定性，老模型在大包量的情况会出现丢包。
+  ![vpc-cni-new](/image/k8s-notes/vpc-cni-new.jpg)
+
 ## DNS解析
 FQDN(Fully Qualified Domain Name) 代表完全限定域名，在进行域名解析时将不会在后面追加顶级域名，FQDN( Partially Qualified Domain Name ) 部分限定域名，可以根据场景在后方追加顶级域名。
 最明显的区别在于 FQDN 后跟一个 `.`, 如 `www.baidu.com.`
@@ -83,3 +103,4 @@ k8s 在 linux 上管理容器CPU资源的策略有两种：
 - 已经执行完的历史POD数据需要从母机上清理，包括容器记录和磁盘占用，这部分内容在 kubelet 中配置，可以参考 [容器镜像的垃圾收集](https://kubernetes.io/zh/docs/concepts/cluster-administration/kubelet-garbage-collection/)
 
 第一点会影响集群的 APIServer 的性能，进而影响到整个集群，第二点如果不设置的话，有可能会导致母机磁盘写满，进而导致母机 NotReady。通常 kubelet 会在母机磁盘到达一定阈值(默认85%)后自动清理不使用的镜像，但是不会清理历史容器，所以也需要关注全局保留的旧容器数量，默认不限制。
+

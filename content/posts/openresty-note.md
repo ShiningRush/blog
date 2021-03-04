@@ -16,7 +16,7 @@ Openresty 是一个国人将LuaJIT嵌入Nginx进程进而可以使用Nginx来进
 入门的简介可以参考这个文档，[OpenResty 不完全指南](https://juejin.im/entry/5ba3abd65188255c8a05f69c)
 
 ## 注意点
-- Openresty 由于是在每个 nginx worker 都运行了一个 luajit 所以它仍然是一个单线程模型，不存在并发问题。
+- Openresty 由于是在每个 nginx worker 都运行了一个 luajit 所以它仍然是一个单线程模型所以不存在 `并行(parall)` 问题，但是用于处理请求的是 lua 的 协程`coroutine`，那么这里可能存在 `并发(parallelism)` 问题，即如果 协程A 因为某种原因挂起后(IO操作/sleep)，此时 协程B 将会被运行，同时共享 `模块变量` 以及 `全局变量`。
 
 ## 最佳实践
 - 很多 lua 的内置函数都是全局变量，把它注册到本地来使用，性能会更好。

@@ -21,3 +21,6 @@ showFullContent = false
 
 ## 框架选择
 - 选择什么框架其实不是很重要，建议把代码构建成框架无关的形式，一般情况下可以使用一些抽象中间件完成
+
+## 分布式原语
+可以参考 Bilgin Ibryam 的博客 [Top 10 must-know Kubernetes design patterns](http://www.ofbizian.com/2020/05/top-10-must-know-kubernetes-design.html)
