@@ -13,7 +13,7 @@ defaultContentLanguage = "ch"
   themeColor = "green"
 
   # if you set this to 0, only submenu trigger will be visible
-  showMenuItems = 2
+  showMenuItems = 3
 
   # show selector to switch language
   showLanguageSelector = false
@@ -60,7 +60,7 @@ defaultContentLanguage = "ch"
 
     [languages.ch.params.logo]
       logoText = "ShiningRush"
-      logoHomeLink = "/"
+      logoHomeLink = "https://github.com/ShiningRush"
 
     [languages.ch.menu]
       [[languages.ch.menu.main]]
@@ -71,6 +71,10 @@ defaultContentLanguage = "ch"
         identifier = "tags"
         name = "Tags"
         url = "/tags"
+      [[languages.ch.menu.main]]
+        identifier = "web"
+        name = "ShiningRush's Web"
+        url = "http://www.dreamrounder.com"
 
   [languages.en]
     languageName = "English"
