@@ -11,6 +11,8 @@ showFullContent = false
 +++
 
 # Prometheus笔记
+Prometheus metrics 名称必须满足： `[a-zA-Z_:][a-zA-Z0-9_:]*` label 名必须满足 `[a-zA-Z0-9_]*`
+
 ## Prometheus远程存储优化
 
 Prometheus 以每两个小时为一个块，存储到磁盘中，内存保存近两个小时的内容，同时也会写 `WAL(write-ahead-log)`，预写日志文件wal以128MB的段存储在目录中。这些文件包含尚未压缩的原始数据，因此它们比常规的块文件要大。Prometheus将至少保留3个预写日志文件，但是高流量服务器可能会看到三个以上的WAL文件，因为它需要保留至少两个小时的原始数据。
@@ -19,7 +21,9 @@ Prometheus 以每两个小时为一个块，存储到磁盘中，内存保存近
 一般来说 `storage.tsdb.max-block-duration` = `storage.tsdb.min-block-duration` = `2h` 就相当于禁用了压缩功能，
 但是别让它们低于 `2h`，否则有以下的问题：
 - 落盘过于频繁，这会很大程度影响 `Promethues` 的吞吐量。
-- 由于 `WAL` 至少保留两个小时，所以这部分的内存是没办法释放的。
+- 由于 `WAL` 和落盘之前的内存都需要保留两个小时，所以这部分的内存是没办法释放的。
+
+注意 `storage.tsdb.max-block-duration` 和 `storage.tsdb.min-block-duration` 指的都是落盘后的块大小，在内存中用于存储最近两小时数据的内存是不可控的，Prometheus 会在落盘后在后台再去压缩合并这些数据。
 
 参考[Remote write tuning](https://prometheus.io/docs/practices/remote_write/)
 
@@ -70,3 +74,24 @@ func (s *SamplePair) UnmarshalJSON(b []byte) error {
 
 ## 使用 Promehtues 求取一段时间内的最大值
 可以使用 `max_over_time(query_range[range])` ，请求最大值时为了只返回一个点，可以使用 `query` 接口，而不是 `query_range`
+
+## Prometheus 的陈旧性( Staleness )
+Prometheus 使用 Stale 机制来标识那些已经不再变化了的 TimeSeries，当它被标记为 stable or 在时间点之前的 5分钟(默认值) 内找不到数据点话，在图表上它会立即消失，具体逻辑如下：
+- 如果 target 不再暴露新的 sample，那么 timeseries 会被标记为 stale
+- 如果 target 被移除，那么不久后 timeseries 会被标记为 stale
+- 如果被标记了的时序又产生了新的 sample 那么它会回归 normal 状态
+- 对于自身携带了 timestamp 的 sample，不会应用 Stable 机制，仅有 5 分钟 的阈值限制
+
+以上点可以参考官方文档 (staleness)(https://prometheus.io/docs/prometheus/latest/querying/basics/#staleness)。
+
+这也就是为什么我们有时会看到某个时序已经停止了产生新样本，但是我们依然可以查询到它。
+
+## Promehtues 的服务发现
+Prometheus抽象了服务发现的接口，只要实现起机制就可以为 Prometheus 实现新的服务发现，文档可以参考 [discovery](https://github.com/prometheus/prometheus/tree/main/discovery)
+
+这里只说明几个遇到过的问题：
+- 当使用 k8s 的 pod 服务发现时，pod 的容器定义最好自己携带端口，否则将会生成一个不带端口的 `__address__`
+
+## 直方图与百分位数
+分位数（quantile）是指将范围划为等分的连续区间，比如常见的二分位，那么分割点就是中位数，当进行百分位时则被称为 `percentile`，统计里面经常出现的名词 P99, P90 等等即 99% 90%，比如 P99=5 即代表样本中的 99% 都小于 5
+Proemethues 有个函数 ``

@@ -22,7 +22,7 @@ showFullContent = false
 
 ## 长连接消息的传输
 传输编码：`Transfer-Encoding`， 内容编码: `Content-Encoding`
-在长连接当中，由于连接不会断开，所以客户端无法知道消息是否已发送完毕，所以出现了 `Content-Length` 字段来告诉浏览器消息已传输完毕。但是很多情况下要计算出完整的响应体都是一件不容易的事情，为了计算出这个字段，我们需要把内容全部加载到内容中，这种实现非常不友好。所以出现了 `Transfer-Encoding`，一般为 `chunked` 代表分块传输。它不但解决动态内容长度的问题，同时还可以配合内容编码 (一般为 `gzip` or `deflate`) 进行变压缩边发送而无需预先知道压缩之前的内容大小。
+在长连接当中，由于连接不会断开，所以客户端无法知道消息是否已发送完毕，所以出现了 `Content-Length` 字段来告诉浏览器消息已传输完毕。但是很多情况下要计算出完整的响应体都是一件不容易的事情，为了计算出这个字段，我们需要把内容全部加载到内容中，这种实现非常不友好。所以出现了 `Transfer-Encoding`，一般为 `chunked` 代表分块传输。它不但解决动态内容长度的问题，同时还可以配合内容编码 (一般为 `gzip` or `deflate`) 进行边压缩边发送而无需预先知道压缩之前的内容大小。
 
 ### 分块格式
 如果一个HTTP消息（包括客户端发送的请求消息或服务器返回的应答消息）的Transfer-Encoding消息头的值为chunked，那么，消息体由数量未定的块组成，并以最后一个大小为0的块为结束。
@@ -75,6 +75,7 @@ sequence
 关于`TIME_WAIT`更详细的内容可以参考：[系统调优你所不知道的TIME_WAIT和CLOSE_WAIT](https://zhuanlan.zhihu.com/p/40013724)
 
 ## LVS(IPVS) 的长连接问题
+Linux 对于长连接有自己的保活机制，在一个 TCP 连接一段时间不活动后则尝试发送探测包，如果探测失败则移除连接
 查看 Linux 保活时间
 ```
 sysctl -a | grep keep
@@ -88,7 +89,9 @@ net.ipv4.tcp_keepalive_time = 7200 # 空闲多少秒之后开始进行探测
 
 为了解决这些问题，很多框架和库都在应用实现了自己的保活机制( KeepAlive )，本质上与系统的机制类似，也是通过心跳包来探测连接是否可用。
 
-当使用 LVS 作为四层代理时，如果Linux 的TCP 保活时间高于 LVS 保活时间，那么在LVS主动断开连接后，Linux却不知道连接已断开，这时候去 read 该连接会得到一个 `Connection reset by peer` 错误，write 会产生 RST 消息，如果继续 write 会产生 `broken pipe` 的错误。
+当使用 LVS 作为四层代理时，如果Linux 的TCP 保活时间高于 LVS 保活时间，那么在LVS主动断开连接后，Linux却不知道连接已断开，这时候分几种情况：
+- 去 read 该连接会得到一个 `Connection reset by peer` or `EOF` 错误，这个取决于当前连接状态，暂时没找到靠谱的答案，
+- write 会产生 RST 消息，如果继续 write 会产生 `broken pipe` 的错误。
 
 查看 lvs 保活时间
 ```
@@ -104,13 +107,14 @@ ipvsadm -lnc
 
 ## TCP连接超时问题
 通常多数 TCP 连接都会依赖 OS 的默认超时时间，那么 OS 的默认超时时间时多少呢，使用以下命令能查看 TCP 重试相关的次数，而每次重试都是上一次重试时间的一倍，即遵从`1s 2s 4s` 这样的规律。
+这种间隔重试方法被称为 `指数退避算法`
 ```
 sysctl -a | grep retries
 ```
 
 ## http 协议: 100-Continue
 当 client 需要在 body 放入数据时，有时候数据较大，需要检查服务端是否接受，可以采用使用该协议。
-客户端可以在请求头部携带头部 `Expect: 100-continue`，curl 命令在 body 大于 1024 会自动携带该头部。
+客户端可以在请求头部携带头部 `Expect: 100-continue`，curl 命令在 body 大于 1024 字节时会自动携带该头部。
 
 注意以下几点：
 - 由于 Server 端不一定会正确处理 100 协议，因此 client 应该在指定的 timeout 之后立即发送body

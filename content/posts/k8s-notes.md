@@ -51,6 +51,7 @@ nsenter -n -t pid   # 进入容器网络空间
 ```
 nsenter -n -t $(docker inspect -f {{.State.Pid}} dockerid)
 ```
+- ssh 在登录过程中会清理环境，导致 k8s 设置的环境变量都被删除，解决方案可以参考 [](https://stackoverflow.com/questions/34630571/docker-env-variables-not-set-while-log-via-shell)
 
 
 ## 网络模型
@@ -75,9 +76,9 @@ k8s 对网络提出了三个基本要求
 ![Aliyun](/image/k8s-notes/ali.jpg)
 - Tencent:
   + Global Router: 使用 Overay 的技术建立的容器网路，母机 和 POD 网络互通，但是由于 Overlay 建立在 VPC 下，因此容器不能访问到不同 VPC 下的 POD。
-  [vpc-cni](/image/k8s-notes/gr.jpg)
+  ![vpc-cni](/image/k8s-notes/gr.jpg)
   + VPC CNI: POD 和 母机 在一个网络平面，这个模式下 POD 和 母机以及 不同 VPC 下的母机都是互通的。
-    ![vpc-cni-new](/image/k8s-notes/vpc-cni.jpg)
+  ![vpc-cni-new](/image/k8s-notes/vpc-cni.jpg)
   + VPC CNI 独立网卡模式: VPC CNI 母机上的 POD 都共用母机的 ENI，新一代的 VPC-CNI 直接将弹性网卡绑定到了 POD 网络命名空间，让其独享 ENi，在实践过程中来看，这个模式提高了网络稳定性，老模型在大包量的情况会出现丢包。
   ![vpc-cni-new](/image/k8s-notes/vpc-cni-new.jpg)
 
@@ -94,13 +95,59 @@ k8s 在 linux 上管理容器CPU资源的策略有两种：
 - CPUSet: 控制容器能够使用的CPU核
 
 这两种策略通常会结合起来一起生效，比如设置某容器的CFS 的 quota 和 period 比值为 2核，但是 cpu set只绑定了 1 号核，那么容器能够使用的最大CPU也只有 1 核，反之也如此。
-k8s 简单来说，当 limit = request 时会为容器绑定专用核，其他情况会绑定共享CPU核。
+k8s 简单来说，当 limit = request 时会为容器绑定专用核，其他情况会绑定共享CPU核。
 详细内容可以查看[控制节点上的 CPU 管理策略](https://kubernetes.io/zh/docs/tasks/administer-cluster/cpu-management-policies/)
 
 ## k8s 的回收策略
 这里涉及到两个方向：
 - 已经执行完的历史POD数据需要从ETCD中清理，此部分内容的相关配置在 scheduler 中
-- 已经执行完的历史POD数据需要从母机上清理，包括容器记录和磁盘占用，这部分内容在 kubelet 中配置，可以参考 [容器镜像的垃圾收集](https://kubernetes.io/zh/docs/concepts/cluster-administration/kubelet-garbage-collection/)
+- 已经执行完的历史POD数据需要从母机上清理，包括容器记录和磁盘占用，这部分内容在 kubelet 中配置，可以参考 [容器镜像的垃圾收集](https://kubernetes.io/zh/docs/concepts/cluster-administration/kubelet-garbage-collection/)
 
 第一点会影响集群的 APIServer 的性能，进而影响到整个集群，第二点如果不设置的话，有可能会导致母机磁盘写满，进而导致母机 NotReady。通常 kubelet 会在母机磁盘到达一定阈值(默认85%)后自动清理不使用的镜像，但是不会清理历史容器，所以也需要关注全局保留的旧容器数量，默认不限制。
 
+
+## 健康检查
+在 k8s 中容器健康检查分为 两类：
+- 存活探测( liveness probe )
+- 就绪探测( readyness probe )
+
+这两者的配置都一样，但是产生的结果不同：
+- 存活探测：初始状态为满足，防止初始化时直接重启容器，探测失败直接重启容器。
+- 就绪探测：初始状态为不满足，防止容器尚未就绪就将流量转发到 pod 中，探测失败会从 Endpoint 中移除。
+
+从上面的角度来考虑，配置健康检查的最佳实践：
+- 将存活探测后置于第一轮就绪探测来执行，防止第一轮就绪检查尚未成功时就重启容器
+- 就绪探测比存活探测更密集，可以及时发现应用阻塞的情况，再配合存活探测来重启容器
+
+
+## 平滑更新
+平滑更新在 k8s 中其实是相对容易实现的，只要注意以下几点：
+- 如果使用了集群外的服务发现机制，比如 consul, zookeeper，这里分情况：
+  + 如果没有做缓存，那么只需要考虑做好应用的优雅退出即可
+  + 如果做了缓存，那么需要做好端点的健康检查，防止重用旧的端点
+- 如果使用 `Service` 来做服务发现，要注意 endpoint 和 kube-proxy 都是异步的，所以保险的方法是使用 `preStop` 的生命周期钩子来等待更新
+```
+lifecycle:
+  preStop:
+    exec:
+    command: ["/bin/sleep", "15"]
+terminationGracePeriodSeconds: 30
+```
+- 如果使用长连接，请注意在 k8s 1.14 版本以前会存在问题，因为 kube-proxy 会直接删除老规则，导致旧的连接收发包时会直接被丢弃，而在新版本中添加关于 Service 的优雅退出：
+  + 首先将老的规则权重更新为 0，这样新建立的连接 (connect) 并不会使用它
+  + 老的连接进行收发包时会正常进行
+  + pod 被销毁后，也会剔除老规则
+- 应用的优雅退出不应该在接收到 SIGTERM 信号立即关闭监听端口，而应该先进行收尾工作：处理当前请求，关闭持有的长连接、Worker等，最后再关闭监听端口，以最大限度容忍由于某些异常原因依然抵达了该服务的请求。
+
+## 以一个 pod 的创建来观察 k8s 的组件协作
+一个 POD 要跑起来会经历以下流程
+- 请求 k8s APIServer，将资源文件添加到集群，这里会涉及到 kubeConfig 的 认证，授权，以及准入控制
+- 当资源被 APIServer 接纳后，`Scheduler` 将会 Watch 到新的资源的产生，并尝试将 Pod 调度到Node上，这里调度涉及几个过程：
+  + 预选：将会根据 Pod 的所需资源（包括计算资源、自定义资源、数据卷等等）、NodeName、NodeSelector、亲和性和容忍度，以及Node的健康状态，筛选出一批可容纳Pod的Node，这些过程都分布在不同调度策略中
+  + 优选：对上个过程中的Node进行打分，打分维度包括：节点的空闲资源，节点的POD数，Pod的亲和性和容忍度等，从中选出得分最高的节点，对节点和Pod进行绑定
+- 当节点的 kubelet watch到有pod与自己进行了绑定则开始创建Pod，流程如下：
+  + 通过 CNI 创建网络空间，通过 CRI 创建 Sandbox，相继启动 Init容器与业务容器，再根据其需求判断是否需要使用 CSI 挂载数据卷，最近再进行健康检查与就绪检查。
+
+至此整个 pod 则被拉起，这里值得一提的有几个点：
+- CRI 创建 Sandbox 的流程在不同CRI下是不同的，比如 runC 体系下，会拉起 pause 容器，然后业务容器共享 pause 容器的网络命名空间，在kata下则会直接拉起一个虚拟机，其他容器则以进程方式共享这个虚拟机。
+- docker 并没有实现 CRI 规范，因此为了支持 docker，k8s 维护了 dockershim 来作为转换组件，docker背后其实跑的也是 containerd，而containerd 可以选择 kata 与 runC 两个运行时,两者都符合 OCI(Open Container Initiative) 规范

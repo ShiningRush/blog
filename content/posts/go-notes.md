@@ -104,6 +104,12 @@ for {
 
 // close
 closeChan <- struct{}{}
+// 这个非常有有意思，考虑正常 channel 的用法，也许第一直觉我们是使用上面的方式
+// 但是多数开元项目用的都是下面这种方式，你是不是会好奇为啥 close 也会触发 select
+// 其实这个可以理解为：如果select 了一个已关闭的 channel 会发生什么？
+// 答案是：立即触发这个 case ，并且 ret, ok := closeCh 中，ok 为 false
+// 这个特性配合 select-default 可以对 channel 的存活进行检测（但是不推荐做这样的事）
+close(aChan)
 ```
 - 利用 atomic + for
 ```go
@@ -118,7 +124,7 @@ atomic.AddInt32(&isClose, 1)
 aChan <- nil
 ```
 
-使用信号的方式非常优雅，但是性能损耗比后者慢了50%
+使用信号的方式非常优雅，但是性能损耗较大，比后者慢了50%
 
 ## 静态库
 当你对一个 `package` 不是 main 的 go文件进行编译时，会得到一个 pkg 的归档文件 `x.a`，它可以提供给其他go引用，但是看不见声明与源码 
@@ -139,3 +145,34 @@ go 有个代码结构非常不错的重试库：[retry-go](https://github.com/av
 
 ## 避免混用 GOPATH 和 go module
 go 在编译时会优先使用 `GOPATH` 下面的源码，即便你的工作目录不处于 `GOPATH` 中，踩过一个坑就是一直在项目目录下编译，但是得到二进制文件都是没有改动过的，就是因为 `GOPATH` 下存在同名项目
+
+## defer 特殊性
+defer 先进后出性质应该是非常常见了，但是在返回值的地方有个特殊处理可能很少人注意到：
+```go
+func f1() (result int) {
+    defer func() {
+        result++
+    }()
+    return 0
+}
+
+func f2() (r int) {
+     t := 5
+     defer func() {
+       t = t + 5
+     }()
+     return t
+}
+```
+
+f1 的执行结果是 1, f2 的执行结果是 5，这里需要注意的是 `return` 语句并不是原子执行的，它是按照以下顺序来执行：
+- 返回值赋值
+- 插入 defer
+- 函数返回
+
+也就是说上面的 f1 例子中，是按照以下顺序：
+- result = 0
+- result ++
+- return
+
+f2同理。
