@@ -1,0 +1,6 @@
+# exclude everything
+*
+
+# include public
+!public
+!nginx.conf
