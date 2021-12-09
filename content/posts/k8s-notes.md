@@ -52,6 +52,7 @@ nsenter -n -t pid   # 进入容器网络空间
 nsenter -n -t $(docker inspect -f {{.State.Pid}} dockerid)
 ```
 - ssh 在登录过程中会清理环境，导致 k8s 设置的环境变量都被删除，解决方案可以参考 [](https://stackoverflow.com/questions/34630571/docker-env-variables-not-set-while-log-via-shell)
+- yaml对于分段内容有几个方法(>, |, +, -)，可以参考 [这里](https://stackoverflow.com/questions/3790454/how-do-i-break-a-string-in-yaml-over-multiple-lines/21699210)
 
 
 ## 网络模型
@@ -165,7 +166,7 @@ terminationGracePeriodSeconds: 30
 
 至此整个 pod 则被拉起，这里值得一提的有几个点：
 - CRI 创建 Sandbox 的流程在不同CRI下是不同的，比如 runC 体系下，会拉起 pause 容器，然后业务容器共享 pause 容器的网络命名空间，在kata下则会直接拉起一个虚拟机，其他容器则以进程方式共享这个虚拟机。
-- docker 并没有实现 CRI 规范，因此为了支持 docker，k8s 维护了 dockershim 来作为转换组件，docker背后其实跑的也是 containerd，而containerd 可以选择 kata 与 runC 两个运行时,两者都符合 OCI(Open Container Initiative) 规范
+- docker 并没有实现 CRI 规范，因此为了支持 docker，k8s 维护了 dockershim 来作为转换组件，docker背后其实跑的也是 containerd，而containerd 可以选择 kata 与 runC 两个运行时,两者都符合 OCI(Open Container Initiative) 规范，此外 containerd 是实现了 CRI 规范的，只是由于历史原因，导致在很长一段时间 kubelet 支持的都是 docker 而不是 containerd，新版的 kubelet 已经弃用了 docker 而直接使用 containerd 方案了。
 
 ## Strategic Merge Patch
 k8s 为了完善 json patch 的一些问题，提出了 `Strategic Merge Patch`，正常它的逻辑是有则覆盖，无则追加，同时还可以通过 yaml 的申明来控制行为，同时它使用一些特殊的指令来完成特别的操作，参考 [Strategic Merge Patch](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md)

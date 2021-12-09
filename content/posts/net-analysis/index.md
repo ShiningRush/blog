@@ -154,7 +154,6 @@ sysctl net.ipv4.tcp_fin_timeout
 - nat：执行 NAT 相关的操作，docker就会在NAT表中创建规则，将 bridge 网络中的请求全都执行 SNAT
 - filter：执行命令行时的默认表
 
-
 按执行的先后顺序，存在以下几个阶段：
 - PREROUTING: 当数据包从网卡出来后所经理的第一个阶段，在此阶段工作的
 - INPUT: 如果数据包是由本机处理的，那么进入此阶段
@@ -163,3 +162,4 @@ sysctl net.ipv4.tcp_fin_timeout
 - POSTROUTING: 当数据包进入网卡之前的最后一个阶段
 
 可以看出 `PREROUTING`、`POSTROUTING` 两个阶段是一定会执行的，所以 NAT 操作几乎也都发生在这里， 流程图可以参考：
+![legacy.png](./images/iptables.png)
