@@ -3,6 +3,7 @@ languageCode = "en-us"
 title = "ShiningRush's Blog"
 theme = "terminal"
 defaultContentLanguage = "ch"
+googleAnalytics = 'G-MK1YXENDW2'
 
 [params]
   # dir name of your main content (default is `content/posts`).
