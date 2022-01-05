@@ -954,3 +954,19 @@ func SetSrv(srv HelloSrv) {
 本文的所用的代码放在了 [Github](https://github.com/ShiningRush/demo-service) 上，需要的同学自行下载。
 
 注意：本示例中的代码不可照搬到生产环境，你可以参考项目分层结构以及业务逻辑的抽象，关于应用层和接入层有很多东西我都简化了，未来如果会写设计相关的文章，我可能会基于本项目继续拓展，那个时候可能会成为一个生产可用的设计，但目前不是。
+
+有些同学会问为啥不用 golang 自带的 mock，可以参考下这篇文章文章：[gomock-vs-testify](https://blog.codecentric.de/2019/07/gomock-vs-testify/)
+
+先分享点有点意思的事情，k8s 项目在2021年9月之前，用的一直是 mockery + testify 和 mockgen 混合，在9月之后突然全部迁移到了 gomock，可以参考这个[commit](https://github.com/kubernetes/kubernetes/commit/0de43974909fc21b125735ddb45cf17e593612ca#diff-a4b2d43e73c9ab11590c91bce28a5724dfcd87d30bd079a2850d014f87a770ce)
+发起的。
+从我的考虑来说：
+- 两个项目差不多太多，gomock在断言方面会更好些，mockery 在生成方便会好些
+- testify 基本上每个项目都会用来做断言，因此直接使用了它的mock会省去对 gomock 的get
+- 对于一些复杂的大型项目来说，使用 go generate + 文件显式指定生成，性能会好很多，也更可控
+- 对于一些小型项目来说，mockery 的自动扫描非常好用，可惜的是，它在v3版本将换成配置文件驱动的生成方式，因为扫描过程的逻辑难以维护，遭遇了很多问题，而且对于大型项目来说，扫描整个项目的成本是非常高的。
+- 两者切换的成本不算高，因此没必要太过担心以后难以切换的问题，新项目的话，还是建议直接使用 gomock，毕竟是官方维护的
+- 存放mock文件的目录：如果你是业务服务，没有外部引用你的库，那么直接以 *_mock.go 后缀放在同一目录会更容易使用，如果有外部引用你的库，放在一个独立的目录，比如 mocks, testing，这样可以让消费方少一点理解。另外不同的决策也会促进你将代码进行聚类，如果选择前者，那么你可能会给项目拆更多的package，而后者你将会尽量合并package，以免文件or目录的膨胀
+
+此外在一些开源项目会比较反对使用mock框架，比如 kubevela, 参考 [这里](https://github.com/oam-dev/kubevela/blob/b2adf5b47226a73192977dee73e51c65b281cfa7/contribute/testcode-guidance.md)。
+作者没有详细解释，但是我觉得可能和这里的倾向类似：[Should we use mocking libraries for go testing](https://www.philosophicalhacker.com/2016/01/13/should-we-use-mocking-libraries-for-go-testing/)。
+[mocksArentStubs](https://martinfowler.com/articles/mocksArentStubs.html)

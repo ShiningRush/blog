@@ -87,8 +87,8 @@ Tips: 当目标进程卡死在用户态时，strace就没有输出了。
 - 内核的连接队列长度太小，导致高并发的情况下直接丢弃了 syn 包
 - 使用了 `net.ipv4.tcp_tw_recycle` 功能，并且 client 端做了 NAT
 - 母机软中断打满(top中的 si)，导致没法响应
-- 如果使用了 ipvs：母机 conntrack 表写满，导致丢包 `net.ipv4.ip_conntrack_max`
-- 网卡带宽打满 or 发包量过大
+- 如果使用了 ipvs：母机 conntrack 表写满，导致丢包，可以查看 `net.ipv4.ip_conntrack_max` 参数
+- 网卡带宽打满 or 发包量过大(网卡稳定性导致,万兆卡一般在28W以上就要注意)
 
 想要确认内核丢弃了多少包可以使用以下命令：
 ```bash

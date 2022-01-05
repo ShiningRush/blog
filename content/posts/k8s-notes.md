@@ -169,5 +169,17 @@ terminationGracePeriodSeconds: 30
 - docker 并没有实现 CRI 规范，因此为了支持 docker，k8s 维护了 dockershim 来作为转换组件，docker背后其实跑的也是 containerd，而containerd 可以选择 kata 与 runC 两个运行时,两者都符合 OCI(Open Container Initiative) 规范，此外 containerd 是实现了 CRI 规范的，只是由于历史原因，导致在很长一段时间 kubelet 支持的都是 docker 而不是 containerd，新版的 kubelet 已经弃用了 docker 而直接使用 containerd 方案了。
 
 ## Strategic Merge Patch
-k8s 为了完善 json patch 的一些问题，提出了 `Strategic Merge Patch`，正常它的逻辑是有则覆盖，无则追加，同时还可以通过 yaml 的申明来控制行为，同时它使用一些特殊的指令来完成特别的操作，参考 [Strategic Merge Patch](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md)
-Tips: 注意 CRD 
+k8s 为了完善 json patch 的一些问题，提出了 `Strategic Merge Patch`，正常它的逻辑是有则覆盖，无则追加，同时还可以通过 yaml 的声明来控制行为，同时它使用一些特殊的指令来完成特别的操作，参考 [Strategic Merge Patch](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md)
+
+## Server-Side Apply
+服务端应用主要用于解决以下问题：
+- 当client直接提交资源时感知不到服务端的资源已经被修改，导致其他人的修改被覆盖
+- 服务端还有一些hook的变更是client端感知不到的
+
+在没有服务端应用之前，客户端提交的逻辑是，获取目标配置，计算 Diff 写入 `last-applied-configuration` annotation 中，下次提交时直接使用这个字段进行计算，然后将 Diff Patch到 APIserver。
+这个操作还带来了另一个问题：如果某个资源的描述文件很大，会超过 k8s 的 annotation 只有 262144 字节的限制。
+因此 k8s 在 1.18 中带来了服务端应用，详细查看：[Server-Side Apply](https://kubernetes.io/zh/docs/reference/using-api/server-side-apply/)
+[BreakDownSSA](https://medium.com/swlh/break-down-kubernetes-server-side-apply-5d59f6a14e26)
+
+要注意SSA也带来了一些问题：
+- 对于提交的yaml没有覆盖到的部分，只会采取 patch 的方式，而不是全集覆盖，这对于某些场景来说可能会是不好的行为
