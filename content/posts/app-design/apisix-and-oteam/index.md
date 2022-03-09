@@ -4,9 +4,9 @@ date = "2021-07-25T12:52:27+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["apisix"]
-keywords = ["apisix"]
-description = ""
+tags = ["app-design","apigateway"]
+keywords = ["apisix", "tencent"]
+description = "本文主要讲述了ApachaAPISIX解决程序中的什么问题，以及在腾讯内部是如何服务于各个业务项目为研发们肩负的。"
 showFullContent = false
 +++
 

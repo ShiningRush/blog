@@ -213,5 +213,13 @@ go get xxxxx@tag
 常见的引用传递，比如slice, pointer等，在网上都有资料，这里不复述了。
 需要注意的可能有以下几点：
 - 当你在一个 struct 里面直接引用另一个 struct 的话，表示你的strcut的内容包含这个struct，而不像其他OO语言一样会视为一个对其他对象的指针。在初始化实例也会为包含的struct分配连续且完整的内存空间。
-- strcut 的方法可以指定指针 `func (t *T) Method`，也可以指定strcut `func (t T) Method`。这两者差别很大，后者会隐式创建一个新的 struct 传入，因此当你包含了一些值传递不安全的类型后(如sync.Map, sync.Mutex等)，请注意不要使用后者。
+- strcut 的方法可以指定指针 `func (t *T) Method`，也可以指定strcut `func (t T) Method`。这两者差别很大，后者会隐式创建一个新的 struct 传入，因此当你包含了一些值传递不安全的类型后(如sync.Map, sync.Mutex等)，请注意不要使用后者。
 - 在 struct 直接引用一个 struct 本身没有太大隐患，你可以类比为其他OO语言的继承，对你的strcut取指针之后你也可以正常调用组合的strcut的指针方法
+
+## go的type和alias
+go 里面有两类类型定义：
+- Type Define: type SomeObject xxxxx
+- Alias Define: type SomeAlias = xxxxx
+
+区别在于，`Type Define` 是定义了一类新的类型，它可以添加方法，同时在类型检测时也会提醒你不匹配。
+而 `Alias Define` 就是字面的 别名，别名的type等同于它指向的目标，在任何场景下都可以互换，一般用于大型项目重构时，将老的类型名直接指向新类型，用于过渡期。

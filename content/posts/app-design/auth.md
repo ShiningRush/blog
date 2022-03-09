@@ -1,16 +1,49 @@
 +++
-title = "鉴权相关"
+title = "API认证授权"
 date = "2021-04-13T14:35:06+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["auth", "oauth2"]
-keywords = ["oauth2", "auth"]
-description = ""
+tags = ["app-design","oauth2"]
+keywords = ["oauth2","auth"]
+description = "本文记录了常见的API认证(Authentication)和授权(Authorization)协议，包括 ACL, RBAC, ABAC，OAuth2.0"
 showFullContent = false
 +++
 
-# 鉴权相关
+# API认证授权
+本文记录了常见的API授权和认证协议。
+
+## 认证( Authentication )与授权( Authorization )
+正常的访问中，我们都会涉及到两个阶段：
+- 认证：你是谁
+- 授权：你能干什么
+
+### 认证
+上面已经提到，所谓认证简单来说就是“你是谁”，无论是颁发凭据的一方还是校验的凭据的一方，都是基于这个目的而行动。
+常见的认证手段有：
+- 密码
+- 验证码
+- 生物识别（指纹，人脸）
+- 证书
+
+而常见的认证协议: 
+- Kerberos: 比较完全
+- LDAP: 轻量，还需要SASL去完善认证的流量
+
+### 授权
+授权是在认证之后识别出你能干什么，这里又分为两类知识：
+- 授权模型：你怎么分配权限
+- 授权协议：你怎么授予他人使用自己的权限资源
+
+常见的授权模型：
+- ACL(Access Control List): 将一组访问权限授予某个账号，类似文件系统的权限
+- RBAC(Role Base Access Control): 类似 ACL，但是不再授予给账号，而是角色，最后再将角色和账号绑定，更为灵活。但是缺点也很明显，多了一个角色管理对象。
+- ABAC(Attribute Base Access Control): 基于属性的控制，相比 RBAC 的区别在于授予权限的对象变成一类满足特定要求的账号，比如 某个属性大于 X 的账号，给予 Y 权限。该模式最为灵活，但是配置太过复杂。 
+
+常见的授权协议有：
+- OAtuh2.0
+- OIDC(OpenID Connect)
+
 ## OAuth2.0
 OAuth2.0 协议是针对授权流程的标准协议，不包括验证，OIDC 是在 OAuth2.0 之上进行的补充，包含了用户身份信息。
 有关它的详细内容在 [RFC6749] https://tools.ietf.org/html/rfc6749，同时还有针对撤回Token和自省的 [RFC7009](https://tools.ietf.org/html/rfc7009)、[RFC7662](https://tools.ietf.org/html/rfc7662)。
@@ -54,21 +87,4 @@ URLS_LOGIN=https://localhost:9001/ -- 实现认证规范的登录端点
 ```bash
 hydra migrate sql --yes $DSN
 ```
-
-## 认证( Authentication )与授权( Authorization )
-正常的访问中，我们都会涉及到两个阶段：
-- 认证：你是谁
-- 授权：你能干什么
-
-### 认证
-上面已经提到，所谓认证简单来说就是“你是谁”，无论是颁发凭据的一方还是校验的凭据的一方，都是基于这个目的而行动。
-常见的认证手段有：
-- 密码
-- 验证码
-- 生物识别（指纹，人脸）
-- 证书
-
-而常见的认证协议: 
-- Kerberos: 比较完全
-- LDAP: 轻量，还需要SASL去完善认证的流量
 

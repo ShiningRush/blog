@@ -1,16 +1,16 @@
 +++
-title = "CORS 小记"
+title = "CORS(Cross-Origin resource sharing) 踩坑笔记"
 date = "2021-02-12T14:35:14+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["http", "cors"]
+tags = ["network", "cors"]
 keywords = ["http", "cors"]
 description = ""
 showFullContent = false
 +++
 
-# CORS(Cross-Origin resource sharing) 笔记
+# CORS(Cross-Origin resource sharing) 踩坑笔记
 CORS是一种为了解决跨域请求而诞生的规范，详细规范参见 [MDN](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Access_control_CORS)
 
 这里只介绍下一些需要注意的点：

@@ -91,6 +91,7 @@ net.ipv4.tcp_keepalive_time = 7200 # 空闲多少秒之后开始进行探测
 
 当使用 LVS 作为四层代理时，如果Linux 的TCP 保活时间高于 LVS 保活时间，那么在LVS主动断开连接后，Linux却不知道连接已断开，这时候分几种情况：
 - 去 read 该连接会得到一个 `Connection reset by peer` or `EOF` 错误，这个取决于当前连接状态，暂时没找到靠谱的答案，
+- 如果 close socket时缓冲区依然存在数据，那么会发送RST包，而不是FIN包，来告诉对端这是一次异常关闭，另外 linux 会在进程退出后使用这种方式关闭掉所有尚未关闭的socket
 - write 会产生 RST 消息，如果继续 write 会产生 `broken pipe` 的错误。
 
 查看 lvs 保活时间
@@ -159,7 +160,7 @@ https 比起 正常的 http 多了一个 TLS 握手，它做了以下几件事�
 再聊聊如何检测证书可信这个流程，这里有个所谓的信任链，即：你信任了 A，A 给 B 签发了证书，B 给 C签发了证书，然后你自然也信任了 C，这个过程会在检测证书时执行。
 
 ## 应用眼中的TCP
-平时我们基本都是使用各个语言封装的 web 框架，很少会去直接进行 socket 编程，这会让我们忽略很多问题。
+平时我们基本都是使用各个语言封装的 web 框架，很少会去直接进行 socket 编程，这会让我们忽略很多问题。
 比如：
 - 建立socket基本都很常见了，但是在linux中有几个内核函数用于 socket 通信：write， send, read,recv, shutdown, close，你知道正确的关闭顺序吗？怎样做才能保证数据包的完整性
 - 在应用层来看，对 socket的了解必须要通过 read/write 来接触，当对端关闭后，read 会得到一个 0 标识对端已经关闭了（在golang里面会封装成 EOF），或者 write/send 得到一个 -1，需要 close 掉，如果使用了 shutdown 函数，那么会通知所有的 socket参与方，这个连接已经关闭，但是不会关闭句柄，需要在之后调用 close 释放资源

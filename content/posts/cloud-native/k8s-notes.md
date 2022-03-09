@@ -84,7 +84,8 @@ k8s 对网络提出了三个基本要求
   ![vpc-cni-new](/image/k8s-notes/vpc-cni-new.jpg)
 
 ### NAT 相关
-k8s 当你使用 `iptables` 模式时，默认发往集群内的请求(比如 `ClusterIP`, `POD`)都不会进行 NAT，其他都会进行 NAT，但是当你请求集群外的地址且你的容器分配了独立可访问的IP时，你肯定不希望对望看到的是你的母机IP，所以需要 [ip-masq-agent](https://kubernetes.io/zh/docs/tasks/administer-cluster/ip-masq-agent/) 插件来帮助调整 NAT 的规则, 这个agent的工作原理就是利用 daemonse 部署到每个母机，同时调整母机上的 iptables 规则。
+k8s 当你使用 `iptables` 模式时，默认发往集群内的请求(比如 `ClusterIP`, `POD`)都不会进行 NAT，其他都会进行 NAT，但是当你请求集群外的地址且你的容器分配了独立可访问的IP时，你肯定不希望对方望看到的是你的母机IP，所以需要 [ip-masq-agent](https://kubernetes.io/zh/docs/tasks/administer-cluster/ip-masq-agent/) 插件来帮助调整 NAT 的规则, 这个agent的工作原理就是利用 daemonset 部署到每个母机，同时调整母机上的 iptables 规则，值得一提的是现在很多集群的节点组件也会使用daemonset来部署，比如kube-proxy。
+具体工作原理还可以参考 [IPVS从入门到精通kube-proxy实现原理](https://zhuanlan.zhihu.com/p/94418251)。
 
 ## DNS解析
 FQDN(Fully Qualified Domain Name) 代表完全限定域名，在进行域名解析时将不会在后面追加顶级域名，FQDN( Partially Qualified Domain Name ) 部分限定域名，可以根据场景在后方追加顶级域名。
@@ -123,6 +124,8 @@ k8s 简单来说，当 limit = request 时会为容器绑定专用核，其他�
 - 将存活探测后置于第一轮就绪探测来执行，防止第一轮就绪检查尚未成功时就重启容器
 - 就绪探测比存活探测更密集，可以及时发现应用阻塞的情况，再配合存活探测来重启容器
 
+## 原地重启
+[揭秘：如何为 Kubernetes 实现原地升级](https://developer.aliyun.com/article/765421)
 
 ## 优雅退出
 k8s 结束一个 pod 时会首先发送一个 TERM 信号 ( 可以在 Dockerfile 中使用 `STOPSIGNAL` 关键字指定退出信号 )给 POD 的所有容器，在等待 `terminationGracePeriodSeconds` 所指定的秒数后如果有容器尚未退出，那么给它们发送 KILL 信号。
@@ -174,7 +177,7 @@ k8s 为了完善 json patch 的一些问题，提出了 `Strategic Merge Patch`�
 ## Server-Side Apply
 服务端应用主要用于解决以下问题：
 - 当client直接提交资源时感知不到服务端的资源已经被修改，导致其他人的修改被覆盖
-- 服务端还有一些hook的变更是client端感知不到的
+- 服务端还有一些hook的变更是client端感知不到的
 
 在没有服务端应用之前，客户端提交的逻辑是，获取目标配置，计算 Diff 写入 `last-applied-configuration` annotation 中，下次提交时直接使用这个字段进行计算，然后将 Diff Patch到 APIserver。
 这个操作还带来了另一个问题：如果某个资源的描述文件很大，会超过 k8s 的 annotation 只有 262144 字节的限制。

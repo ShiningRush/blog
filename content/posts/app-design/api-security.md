@@ -4,9 +4,9 @@ date = "2021-02-12T14:32:31+08:00"
 author = "vincixu"
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["api", "security"]
-keywords = ["api", "security"]
-description = ""
+tags = ["app-design","security"]
+keywords = ["app-design","security"]
+description = "介绍常见的网络攻击手段：重放攻击，数据劫持以及篡改以及加解密等"
 showFullContent = false
 +++
 

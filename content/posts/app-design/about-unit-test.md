@@ -4,9 +4,9 @@ date = "2021-08-18T16:30:04+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["unit-test"]
-keywords = ["unit-test"]
-description = ""
+tags = ["app-design","unit-test"]
+keywords = ["单元测试", "单元测试的必要性"]
+description = "很多人都在质疑单元测试的必要性，今天我们就来探讨下，单元测试对一个服务或者框架来说，到底有多重要"
 showFullContent = false
 +++
 

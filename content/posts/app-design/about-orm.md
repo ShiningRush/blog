@@ -4,9 +4,9 @@ date = "2021-08-18T16:34:50+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["ORM"]
+tags = ["app-design","orm"]
 keywords = ["ORM"]
-description = ""
+description = "本文重在分析ORM在程序设计中的收益与风险，回答 ——是否应该使用ORM—— 这个常见问题"
 showFullContent = false
 +++
 

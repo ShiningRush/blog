@@ -4,9 +4,9 @@ date = "2021-02-12T15:30:56+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["apisix"]
+tags = ["app-design","apisix"]
 keywords = ["apisix"]
-description = ""
+description = "编写APISIX的插件的常见姿势以及简单介绍"
 showFullContent = false
 +++
 
