@@ -4,8 +4,8 @@ date = "2021-02-12T14:43:47+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["k8s", "k8s-operator"]
-keywords = ["k8s", "k8s-operator"]
+tags = ["k8s","k8s-operator"]
+keywords = ["k8s","k8s-operator"]
 description = ""
 showFullContent = false
 +++

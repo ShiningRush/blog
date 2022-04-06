@@ -1,17 +1,19 @@
 +++
-title = "如何优雅地处理Error"
+title = "golang如何优雅地处理Error"
 date = "2022-02-24T12:04:19+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["", ""]
-keywords = ["", ""]
+tags = ["go"]
+keywords = ["go","error-handler"]
 description = ""
 showFullContent = false
 readingTime = false
 +++
 
-# 如何处理Error
+# golang如何优雅地处理Error
+今天想要分享的是，`golang中该如何优雅地处理错误`。
+
 怎么处理Error是golang中一个非常关键的事情，因为golang的设计导致代码中到处都是类似以下的代码
 ```golang
 if err != nil {

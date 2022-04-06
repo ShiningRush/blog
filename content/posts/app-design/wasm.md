@@ -4,14 +4,14 @@ date = "2021-02-12T15:15:02+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["prometheus"]
+tags = ["wasm"]
 keywords = ["prometheus"]
 description = ""
 showFullContent = false
 +++
 
 # WASM小记
-这几天工作需要，了解了一下WASM(WebAssembly)，做个笔记备忘一下
+这几天工作需要，了解了一下WASM(WebAssembly)，做个笔记备忘一下
 
 ## 背景
 WASM 最初诞生的目标是为了解决在浏览器中执行效率的问题，由于JS是一个动态语言，因此对语言其进行优化时会出现一些意向不到的情况，比如上一秒是Object的变量，下一秒就变成了Array，这就导致编译器必须不停地去重新编译成字节码并优化。
@@ -24,7 +24,7 @@ function asmJs() {
     let myDouble = +1.1;
 }
 ```
-为了彻底解决这个问题且获得更好的扩展性，2015年，WASM 诞生了：作为一个规范，它指导各种语言编译成特定格式的字节码，类似：
+为了彻底解决这个问题且获得更好的扩展性，2015年，WASM 诞生了：作为一个规范，它指导各种语言编译成特定格式的字节码，类似：
 ```
 20 00
 42 00
@@ -37,7 +37,7 @@ function asmJs() {
 说完了背景，我们来看看 WASM 的工作流程是怎样的。
 简单来说，我们构建一个 WASM 模块只需要几个步骤：
 1. 通过特定工具，比如 [AssemblyScript](https://github.com/AssemblyScript/assemblyscript),[emscripten](https://github.com/emscripten-core/emscripten)，前者是将 TypeScripe 编译成 WASM 字节码，后者支持多种语言。
-2. 找一个运行时来运行 WASM 字节码，现在主流浏览器基本都已经内置了 WASM 的运行时，可以直接执行 WASM 文件
+2. 找一个运行时来运行 WASM 字节码，现在主流浏览器基本都已经内置了 WASM 的运行时，可以直接执行 WASM 文件
 
 就是这么简单两步，我们就可以体验 WASM 的快乐了，更多的编译和运行工具参考：[Benchmark of WebAssembly runtimes - 2021 Q1](https://00f.net/2021/02/22/webassembly-runtimes-benchmarks/)
 
@@ -48,7 +48,7 @@ dapr 和 wasm 都有一个目的：解耦依赖，不同的是两者解法不同
 
 ## 总结
 虽然 WASM 诞生于 Web，但由于良好的多语言跨平台特性，其实反而在 Web 以外的领域得到的很多实践：
-- Istio 方案在 v1.5 后利用了 wasm 实现对 envoy 的动态扩展，同时替代了 mixser 的作用
+- Istio 方案在 v1.5 后利用了 wasm 实现对 envoy 的动态扩展，同时替代了 `mixser` 的作用
 - ApacheAPISIX 中利用 WASM 来实现多语言插件的执行
 - 云平台基于 WASM 来做作为容器运行时，实现毫秒级别的冷启动
 
@@ -58,9 +58,9 @@ dapr 和 wasm 都有一个目的：解耦依赖，不同的是两者解法不同
 - Web中移植一些其他语言的库，或者对计算的瓶颈进行优化
 - 为应用支持插件机制：WASM的隔离性对于容器场景来说或者偏弱了，但是对于插件场景却特别合适
 
-对于云上环境，我觉得除了 Serverless 的场景可能会有变革性的影响外，目前来看WASM应该没法成为 OCI 的首选，原因如下：
+对于云上环境，我觉得除了 Serverless 的场景可能会有变革性的影响外，目前来看WASM应该没法成为 OCI 的首选，原因如下：
 - 隔离性偏弱
 - 功能缺失
 
-虽然 docker 的总裁表示，如果 2008 年有 WASM，就不需要 Docker了，WASM 就是这么重要。但我觉得，就算没有 Docker，也一定会有 k8s，会有 CRI，OCI 规范，WASM 最理想也就是一个替换 runC 的选择，而还是会有场景需要隔离性更好的 kata.
-可以参考下 [WebAssembly 与 Kubernetes双剑合璧](https://zhuanlan.zhihu.com/p/111057726)
+虽然 docker 的总裁表示，如果 2008 年有 WASM，就不需要 Docker了，WASM 就是这么重要。但我觉得，就算没有 Docker，也一定会有 k8s，会有 CRI，OCI 规范，WASM 最理想也就是一个替换 `runC` 的选择，而还是会有场景需要隔离性更好的 `kata`.
+可以参考下 [WebAssembly 与 Kubernetes双剑合璧](https://zhuanlan.zhihu.com/p/111057726)

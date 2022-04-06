@@ -1,18 +1,18 @@
 +++
-title = "go context的正确打开姿势"
+title = "golang context的正确打开姿势"
 date = "2022-02-07T13:55:31+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["", ""]
-keywords = ["", ""]
+tags = ["go"]
+keywords = ["go","context"]
 description = ""
 showFullContent = false
 readingTime = false
 +++
 
-# go context的正确打开姿势
-工作中发现很多同学不太了解 context 什么时候用，怎么用，这里从我的工作经验上简单分享下。
+# golang context的正确打开姿势
+工作中发现很多同学不太了解 context 什么时候用，怎么用，这里从我的工作经验上简单分享下，golang中该如何优雅地处理错误。
 
 ## context目的
 两个重要作用：
