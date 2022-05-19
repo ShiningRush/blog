@@ -49,7 +49,7 @@ cat /proc/net/nf_conntrack
 - `src/dst/host hostname` 抓取 来自(src) or 发往(dst)，且 host 为 hostname 的流量，host 选项为全抓
 - `-s 0` 默认只抓取 68 字节，指定 0 可以抓取完整数据包
 - `-X` 以十六进制 和 ACII 的方式查看数据包细节 `-A` 标识仅用 ACII
-- `port 8080` 抓取端口 8080 的流量
+- `port 8080` 抓取端口 8080 的流量 如果和 src/dst/host 一起使用，需要 `and` 连接
 - `tcp/udp port 8080` 指定 8080 端口的 tcp/udp 流量
 - `-nn` 单个 n 表示不解析域名，直接显示 IP；两个 n 表示不解析域名和端口。这样不仅方便查看 IP 和端口号，而且在抓取大量数据时非常高效，因为域名解析会降低抓取速度
 - `-C int` 限制单个采集文件的大小，单位 MB
@@ -162,5 +162,5 @@ sysctl net.ipv4.tcp_fin_timeout
 - OUTPUT: 如果数据包由本机发出，进入此阶段
 - POSTROUTING: 当数据包进入网卡之前的最后一个阶段
 
-可以看出 `PREROUTING`、`POSTROUTING` 两个阶段是一定会执行的，所以 NAT 操作几乎也都发生在这里， 流程图可以参考：
+可以看出 `PREROUTING`、`POSTROUTING` 两个阶段是一定会执行的，所以 NAT 操作几乎也都发生在这里， 流程图可以参考：
 ![legacy.png](./images/iptables.png)

@@ -80,7 +80,7 @@ RUN apk add --no-cache \
 
 参考 [这里](https://stackoverflow.com/questions/36279253/go-compiled-binary-wont-run-in-an-alpine-docker-container-on-ubuntu-host/36308464#36308464)
 
-## goroutine 的性能小记
+## goroutine 的channel性能小记
 由于 goroutine 实现中包含了一把互斥锁，因此在多个 worker 竞争一个 channel 时会比较消耗性能，此时可以考虑对 channel 进行分片，实验发现以下两个配置效果比较好：
 - 一个 worker 对应一个 channel，不过这样比较占用内存，同时也要注意数量不能无限递增，性能最高，但是空间占用最大
 - 取CPU逻辑线程数(runtime.GOMAXPROCES) 作为分片数，这是在 m3 中看到的做法，效果不错，性能次之不过很节省空间
@@ -223,3 +223,13 @@ go 里面有两类类型定义：
 
 区别在于，`Type Define` 是定义了一类新的类型，它可以添加方法，同时在类型检测时也会提醒你不匹配。
 而 `Alias Define` 就是字面的 别名，别名的type等同于它指向的目标，在任何场景下都可以互换，一般用于大型项目重构时，将老的类型名直接指向新类型，用于过渡期。
+
+## go的GPM模型
+模型的详述在网上有大量文章了，这里仅仅补充一些很容易忽略的细节：
+- go 在1.12版本以前使用的是 GM 模型，没有P，导致在全局队列上的锁竞争非常严重
+- goroutine 在用户态阻塞时（channel、timesleep等）会解开与M的关联，单独分配到一个队列等待唤醒，如果是内核态阻塞（网络IO，磁盘IO等），这里可能会解绑GM也可能会新起一个M去执行剩余的G，这取决于几种情况：
+ + 如果进行的是异步系统调用，比如网络IO，go实现了一个 [network poller](https://go.dev/src/runtime/netpoll.go) 模块（kqueue-MacOS), epoll-Linux or iocp-Windows），它负责处理G而无需阻塞M
+ + 如果进行的是同步系统调用，比如在CGO中的系统调用、Linux下的文件IO等（kqueue和iocp都支撑文件IO的异步操作，但是epoll不行），都没有实现异步操作，因此只能阻塞M而新起另一个M来继续执行剩余的M
+
+ 可以参考：
+ [Scheduling In Go : Part II - Go Scheduler](https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html)
