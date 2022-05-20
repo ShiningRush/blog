@@ -1,18 +1,18 @@
 +++
-title = "Fastflow"
+title = "Fastflow——基于golang的轻量级工作流框架"
 date = "2022-04-26T12:06:53+08:00"
 author = ""
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["", ""]
-keywords = ["", ""]
+tags = ["app-design","fastflow"]
+keywords = ["工作流框架","任务引擎","工作流","workflow"]
 description = ""
 showFullContent = false
 readingTime = false
 +++
 
 # Fastflow——基于golang的轻量级工作流框架
-Fastflow是什么？用一句话来定义它：一个 `基于golang协程`、`支持水平扩容`的分布式高性能`工作流框架`。
+[Fastflow](https://github.com/ShiningRush/fastflow) 是什么？用一句话来定义它：一个 `基于golang协程`、`支持水平扩容`的分布式高性能`工作流框架`。
 它具有以下特点：
 - **易用性**：工作流模型基于 `DAG` 来定义，同时还提供开箱即用的 API，你可以随时通过 API 创建、运行、暂停工作流等，在开发新的原子能力时还提供了开箱即用的分布式锁功能
 - **高性能**：得益于 golang 的协程 与 channel 技术，`fastflow` 可以在单实例上并行执行数百、数千乃至数万个任务
