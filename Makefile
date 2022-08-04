@@ -7,8 +7,9 @@ init:
 
 .PHONY: build
 build:
+	rm -rf ./public/*
 	hugo
-	docker build . -t $(HUB_URL)/$(SRV_NAME)
+	docker build --no-cache . -t $(HUB_URL)/$(SRV_NAME) 
 
 .PHONY: publish
 publish: build

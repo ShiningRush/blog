@@ -46,3 +46,4 @@ ngx.req.read_body()
 ```
 - Openresty 有时 `ngx.req.get_body_data()` 读取不到数据时因为已经被转储到文件了，还需要从 `ngx.req.get_body_file` 中读取
 - Nginx 有两个比较关键的参数 [client_body_buffer_size](http://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_buffer_size) 和 [client_max_body_size](http://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size) ，前者控制缓冲区大小，大于这个部分的请求体会被转储为临时文件（文档上说明为部分或全部，但目前观测到的情况一般都是全部转储）；后者控制能接受的最大请求体，大于会被拒绝( 413 Request Entity Too Large)
+- Nginx 默认是buff在内存后再转发的，并非流式传输，参考https://stackoverflow.com/questions/33460569/nginx-proxy-buffering-changing-buffers-number-vs-size，在1.7后可以关闭，参考：https://stackoverflow.com/questions/5963080/disable-request-buffering-in-nginx

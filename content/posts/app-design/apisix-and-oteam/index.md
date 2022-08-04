@@ -11,7 +11,7 @@ showFullContent = false
 +++
 
 # APISIX 与 腾讯 Oteam 的故事
-*本文内容来自 Apache APISIX Meetup 的同名分享*
+*本文内容来自 Apache APISIX Meetup 的同名分享 —— [APISIX 与 腾讯 Oteam 的故事](https://mp.weixin.qq.com/s/-hqozVwxbQdJE7JdICoTrg)*
 
 在开始介绍正文之前，我们有必要先了解一下 `网关(Gateway)` 的作用和价值。
 

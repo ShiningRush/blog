@@ -103,3 +103,7 @@ googleAnalytics = 'G-MK1YXENDW2'
         identifier = "showcase"
         name = "Showcase"
         url = "/showcase"
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true

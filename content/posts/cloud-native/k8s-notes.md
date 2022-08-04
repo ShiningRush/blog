@@ -161,8 +161,8 @@ terminationGracePeriodSeconds: 30
 ## 以一个 pod 的创建来观察 k8s 的组件协作
 一个 POD 要跑起来会经历以下流程
 - 请求 k8s APIServer，将资源文件添加到集群，这里会涉及到 kubeConfig 的 认证，授权，以及准入控制(webhook 在这里生效，分为准入 webhook 以及修改的webhook)
-- 当资源被 APIServer 接纳后，`Scheduler` 将会 Watch 到新的资源的产生，并尝试将 Pod 调度到Node上，这里调度涉及几个过程：
-  + 预选：将会根据 Pod 的所需资源（包括计算资源、自定义资源、数据卷等等）、NodeName、NodeSelector、亲和性和容忍度，以及Node的健康状态，筛选出一批可容纳Pod的Node，这些过程都分布在不同调度策略中
+- 当资源被 APIServer 接纳并写入etcd后，`Scheduler` 将会 Watch 到新的资源的产生，并尝试将 Pod 调度到Node上，这里调度涉及几个过程：
+  + 预选：将会根据 Pod 的所需资源（包括计算资源、自定义资源、数据卷等等）、NodeName、NodeSelector、Node亲和性和容忍度，以及Node的健康状态，筛选出一批可容纳Pod的Node，这些过程都分布在不同调度策略中
   + 优选：对上个过程中的Node进行打分，打分维度包括：节点的空闲资源，节点的POD数，Pod的亲和性和容忍度等，从中选出得分最高的节点，对节点和Pod进行绑定
 - 当节点的 kubelet watch到有pod与自己进行了绑定则开始创建Pod，流程如下：
   + 通过 CNI 创建网络空间，通过 CRI 创建 Sandbox，相继启动 Init容器与业务容器，再根据其需求判断是否需要使用 CSI 挂载数据卷，最近再进行健康检查与就绪检查。
@@ -170,6 +170,10 @@ terminationGracePeriodSeconds: 30
 至此整个 pod 则被拉起，这里值得一提的有几个点：
 - CRI 创建 Sandbox 的流程在不同CRI下是不同的，比如 runC 体系下，会拉起 pause 容器，然后业务容器共享 pause 容器的网络命名空间，在kata下则会直接拉起一个虚拟机，其他容器则以进程方式共享这个虚拟机。
 - docker 并没有实现 CRI 规范，因此为了支持 docker，k8s 维护了 dockershim 来作为转换组件，docker背后其实跑的也是 containerd，而containerd 可以选择 kata 与 runC 两个运行时,两者都符合 OCI(Open Container Initiative) 规范，此外 containerd 是实现了 CRI 规范的，只是由于历史原因，导致在很长一段时间 kubelet 支持的都是 docker 而不是 containerd，新版的 kubelet 已经弃用了 docker 而直接使用 containerd 方案了。
+
+containerd命令行工具参考：
+1. ctr: containerd的官方工具，注意k8s的容器都在 k8s.io namespace下
+2. crictl: k8s为container 出的，和docker类似，但是可以直接查看pod
 
 ## Strategic Merge Patch
 k8s 为了完善 json patch 的一些问题，提出了 `Strategic Merge Patch`，正常它的逻辑是有则覆盖，无则追加，同时还可以通过 yaml 的声明来控制行为，同时它使用一些特殊的指令来完成特别的操作，参考 [Strategic Merge Patch](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md)
