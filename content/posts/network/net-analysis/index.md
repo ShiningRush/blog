@@ -1,5 +1,5 @@
 +++
-title = "网络分析"
+title = "网络问题杂谈"
 date = "2021-02-12T15:09:23+08:00"
 author = ""
 authorTwitter = "" #do not include @
@@ -10,7 +10,6 @@ description = ""
 showFullContent = false
 +++
 
-# 网络分析
 本文记录了一些工作中常见的网络问题以及网络工具使用方法，包括：NAT是什么、tcpdump用法、connect超时等。
 
 在 `linux` 上我们可以使用 `tcpdump` 来分析流量包，`wireshark` 分析包，`strace` 查看进程调用。
@@ -21,12 +20,13 @@ showFullContent = false
 如果仅仅只是为了代理 https 流量而不解析，可以使用 http 的隧道协议，使用 `CONNECT` method 去连接代理服务器，然后代理服务自动转发握手请求，相当于客户端直接与目标服务连接。
 
 ## NAT(Net Address Translation) 
-NAT 常用于虚拟化技术中，又分为三类
+NAT 常用于虚拟化技术中，又分为三类：
 - 静态NAT：此类NAT在本地和全局地址之间做一到一的永久映射。须注意静态NAT要求用户对每一台主机都有一个真实的Internet IP地址。
 - 动态NAT：允许用户将一个未登记的IP地址映射到一个登记的IP地址池中的一个。采用动态分配的方法将外部合法地址映射到内部网络，无需像静态NAT那样，通过对路由器进行静态配置来将内部地址映射到外部地址，但是必须有足够的真正的IP地址来进行收发包。
 - 地址端口NAT（NAPT）：最为流行的NAT配置类型。通过多个源端口，将多个未登记的IP地址映射到一个合法IP地址（多到一）。使用PAT能够使上千个用户仅使用一个全局IP地址连接到Internet。NAPT 又根据转换源头或者目标不同又分为 SNAT 和 DNAT。实现 NAPT 的常见手段是设备维护一张转换表，里面存储了由 源地址：端口 到 转换后地址：端口 的映射关系
 
-> Tips:
+> **Tips**
+> 
 > SNAT, DNAT, MASQUERADE都是NAT, MASQUERADE是SNAT的一个特例, SNAT是指在数据包从网卡发送出去的时候，把数据包中的源地址部分替换为指定的IP，而 MASQUERADE 则是用指定用网卡 IP 来替换。最开始了解 SNAT 和 DNAT 时觉得两者就是相互的，一旦产生了一个 SNAT，回包时就必须有 DNAT 的操作，但是事实上区分两者时是以发送数据包的动作来区分，而不是接收。因为路由是按照目的地址来选择的，因此DNAT是在PREROUTING链 上来进行，而SNAT是在数据包发送出去的时候才进行，因此是在POSTROUTING链上进行的
 
 iptable, 和 ipvs 都有 NAT 的功能，它们使用 nf_conntrack 内核模块来跟踪各个映射关系，当被 syn_flood 攻击时，conntrack 表被写满也会导致新连接的包被丢弃。
@@ -41,9 +41,9 @@ cat /proc/sys/net/netfilter/nf_conntrack_count
 cat /proc/net/nf_conntrack
 ```
 
-查看 当前数量
-
 ## tcpdump用法小结
+tcpdump 用于抓取 tcp/udp 流量，可用于辅助调查一些偶现问题。
+
 ### 常用选项
 - `-i any` 可以抓取所有网卡流量
 - `src/dst/host hostname` 抓取 来自(src) or 发往(dst)，且 host 为 hostname 的流量，host 选项为全抓
@@ -81,6 +81,23 @@ Tips: 当目标进程卡死在用户态时，strace就没有输出了。
 - `-T` 显示每次系统调用所花费的时间
 - `-e trace=process` 控制要跟踪的事件和跟踪行为,比如指定要跟踪的系统调用名称
 
+
+## socat用法小结
+socat有很多用法，但是我只介绍一种：用于监听程序发送往特定 uds(unix domain socket)。
+安装好 socat 后执行以下命令
+```bash
+# 备份原 uds
+mv /path/to/sock /path/to/sock.original
+
+# 使用socat 创建一个用于监听的uds，替换老的uds，同时将数据发送往备份的uds，保持链路正常
+socat -t100 -x -v UNIX-LISTEN:/path/to/sock,mode=777,reuseaddr,fork UNIX-CONNECT:/path/to/sock.original
+
+# 抓取数据
+...
+
+# 分析完毕后，还原uds
+mv /path/to/sock.original /path/to/sock
+```
 
 ## 网络问题小记
 ### connect 超时
