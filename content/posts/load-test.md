@@ -135,6 +135,11 @@ Confirmation-Token: 90215
 Authorization: Token DEADBEEF
 ```
 
+然后使用以下命令：
+```bash
+cat demo | vegeta attack -duration=5s | tee results.bin | vegeta report
+```
+
 
 ## Wrk 用法
 ### Wrk是什么

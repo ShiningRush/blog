@@ -131,7 +131,7 @@ Linux 在分配物理内存时，以页位单位分配，寻址时通过 页索�
 
 ## 日志分析
 linux 系统下的日志基本都在 `/var/log/` 目录下，有系统写的，也有服务写。最常用的就是 `/var/log/messages`(系统日志), `/var/log/dmesg`(内核日志)，日志目录下的各类日志都是很多通过 `syslog` 的进程来产生。
-systemd 所维护的程序日志可以通过 `journalctl` 指令来查看，日志根据配置
+systemd 所维护的程序日志可以通过 `journalctl -u xxxx` 指令来查看，比如查看 kubelet 的日志：`journalctl -u kubelet`，日志根据配置
 ```bash
 /etc/systemd/journald.conf
 /etc/systemd/journald.conf.d/*.conf
