@@ -1,4 +1,4 @@
-# Droplet——一款超轻量的Golang应用层框架
+# Droplet——一款轻量的Golang应用层框架
 如标题所描述的，Droplet 是一个 **轻量** 的 **中间层框架**，何为中间层呢？
 通常来说，我们的程序（注意这里我们仅仅讨论程序的范围，而非作为一个系统，因此这里不设计如 LB、Gateway、Mesh等内容，因为它们都处于程序以外）按不同的职责可以分为不同的层次，而按照不同的设计风格，常见的如下：
 - 三层架构：UIL(UserInterfaceLayer), BLL(BusinessLogicLayer), DAL(DataAccessLayer)
