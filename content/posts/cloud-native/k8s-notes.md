@@ -19,7 +19,7 @@ showFullContent = false
 更新configmap后：
 - 使用该configmap的环境变量和命令行参数不会触发更新。
 - 使用该configmap挂载的数据卷会触发更新。
-- 如果使用子路径方式挂载的数据卷，将不会触发更新。
+- 如果使用子路径(Subpah)方式挂载的数据卷，将不会触发更新。
 
 ### PV(PersistentVolume) 与 PVC(PersistentVolumeClaim)
 
@@ -100,7 +100,7 @@ k8s 在 linux 上管理容器CPU资源的策略有两种：
 - CPUSet: 控制容器能够使用的CPU核
 
 这两种策略通常会结合起来一起生效，比如设置某容器的CFS 的 quota 和 period 比值为 2核，但是 cpu set只绑定了 1 号核，那么容器能够使用的最大CPU也只有 1 核，反之也如此。
-k8s 简单来说，当 limit = request 时会为容器绑定专用核，其他情况会绑定共享CPU核。
+k8s 简单来说，当 limit = request 且 cpu管理策略为 static 时会为容器绑定专用核，其他情况会绑定共享CPU核。
 详细内容可以查看[控制节点上的 CPU 管理策略](https://kubernetes.io/zh/docs/tasks/administer-cluster/cpu-management-policies/)
 
 ## k8s 的回收策略
