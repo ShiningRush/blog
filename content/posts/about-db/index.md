@@ -16,7 +16,7 @@ showFullContent = false
 - SQL: Mysql, PostgresQL, SQLServer, Oracle
 - NoSQL: 不同传统的SQL数据库，又分成了：
   + 文档型数据库：CouchDB, MongoDB, ElasticSearch等
-  + 图数据库：JanusGraph等
+  + 图数据库：JanusGraph, HugeGraph等
   + 键值数据库： ETCD, Redis, memcached, Zookeeper, Consul
   + 列族数据库：Cassandra, BigTable, HBase
   + 时序型数据库：InfluxDB, OpenTSDB, Prometheus, m3db等等

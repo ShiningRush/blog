@@ -957,7 +957,7 @@ func SetSrv(srv HelloSrv) {
 
 有些同学会问为啥不用 golang 自带的 mock，可以参考下这篇文章文章：[gomock-vs-testify](https://blog.codecentric.de/2019/07/gomock-vs-testify/)
 
-先分享点有点意思的事情，k8s 项目在2021年9月之前，用的一直是 mockery + testify 和 mockgen 混合，在9月之后突然全部迁移到了 gomock，可以参考这个[commit](https://github.com/kubernetes/kubernetes/commit/0de43974909fc21b125735ddb45cf17e593612ca#diff-a4b2d43e73c9ab11590c91bce28a5724dfcd87d30bd079a2850d014f87a770ce)
+先分享点有点意思的事情，k8s 项目在2021年9月之前，用的一直是 mockery + testify 和 mockgen 混合，在9月之后突然全部迁移到了 gomock，可以参考这个[commit](https://github.com/kubernetes/kubernetes/commit/0de43974909fc21b125735ddb45cf17e593612ca#diff-a4b2d43e73c9ab11590c91bce28a5724dfcd87d30bd079a2850d014f87a770ce)
 发起的。
 从我的考虑来说：
 - 两个项目差不多太多，gomock在断言方面会更好些，mockery 在生成方便会好些

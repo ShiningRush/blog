@@ -88,7 +88,7 @@ k8s 当你使用 `iptables` 模式时，默认发往集群内的请求(比如 `C
 具体工作原理还可以参考 [IPVS从入门到精通kube-proxy实现原理](https://zhuanlan.zhihu.com/p/94418251)。
 
 ## DNS解析
-FQDN(Fully Qualified Domain Name) 代表完全限定域名，在进行域名解析时将不会在后面追加顶级域名，FQDN( Partially Qualified Domain Name ) 部分限定域名，可以根据场景在后方追加顶级域名。
+FQDN(Fully Qualified Domain Name) 代表完全限定域名，在进行域名解析时将不会在后面追加顶级域名，PQDN( Partially Qualified Domain Name ) 部分限定域名，可以根据场景在后方追加顶级域名。
 最明显的区别在于 FQDN 后跟一个 `.`, 如 `www.baidu.com.`
 - 解析域名时，遵从 `/etc/resolve.conf` 指定的参数, `nameserver` 指代下一级查询的 dns 服务器， `search` 指定在域名为 PQDN 时，尝试追加的基本域名
 - k8s 在网络容器初始化时会根据 yaml 的内容来决定如何初始化 pod 的内容，参考 [Pod 与 Service 的 DNS](https://kubernetes.io/zh/docs/concepts/services-networking/dns-pod-service/)
@@ -102,6 +102,8 @@ k8s 在 linux 上管理容器CPU资源的策略有两种：
 这两种策略通常会结合起来一起生效，比如设置某容器的CFS 的 quota 和 period 比值为 2核，但是 cpu set只绑定了 1 号核，那么容器能够使用的最大CPU也只有 1 核，反之也如此。
 k8s 简单来说，当 limit = request 且 cpu管理策略为 static 时会为容器绑定专用核，其他情况会绑定共享CPU核。
 详细内容可以查看[控制节点上的 CPU 管理策略](https://kubernetes.io/zh/docs/tasks/administer-cluster/cpu-management-policies/)
+
+> 这里需要注意的是cpuset不等于cpu亲和性，cpu亲和性一般使用 `sched_setaffinity(2)` 来绑定，其指定的cpu必须属于 `cpuset` 。
 
 ## k8s 的回收策略
 这里涉及到两个方向：
@@ -190,3 +192,17 @@ k8s 为了完善 json patch 的一些问题，提出了 `Strategic Merge Patch`�
 
 要注意SSA也带来了一些问题：
 - 对于提交的yaml没有覆盖到的部分，只会采取 patch 的方式，而不是全集覆盖，这对于某些场景来说可能会是不好的行为
+
+## 如何查看容器的文件
+> 参考：https://blog.px.dev/container-filesystems/
+
+## 渐进式部署
+默认的k8s只支持 Recreate 和 Rolliupdate，其实在业务场景来说是不太够的，其他的发布策略还有：
+- 蓝绿
+- 灰度
+
+为了支持这些东西，很多大厂都是基于 k8s 包装了更上层的概念来实现服务的发布部署，而社区目前有两个热度比较高的项目来支持这些功能：
+- [flagger](https://github.com/fluxcd/flagger): 属于 fluxcd 项目，和 argoproj 这个组织一样，都是以云原生的方式去推进工具的发展，fluxcd 项目主要聚焦在持续集成与部署上。
+- [argo-rollouts](https://github.com/argoproj/argo-rollouts): 上面已经介绍过了，这两个项目和组织的目的都高度相似。
+
+简单来看，flagger支持更多的流量治理工具，而 argo-rollouts 可以很好的和它的CD项目结合。工作原理上没有太大区别，两者都需要使用各自的CRD来替换原生Deployment。

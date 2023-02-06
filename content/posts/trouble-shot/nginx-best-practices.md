@@ -23,7 +23,7 @@ readingTime = false
 现在我们来详细看看过程中涉及哪些参数，以一个请求发起为例
 
 1. client 发起请求，nginx 根据 `proxy_request_buffering` 判断是否需要缓存请求 body，默认为 `on`，即缓存请求
-2. 如果开启缓存，那么 nginx 会不断缓存 body 到内存中，大小为 `client_body_buffer_size` 所指定的大小，默认为一个内存页大小 4k(32bit os)/8k(64bit)，不过这个参数不一定适合现在的硬件了，参考 [这里](https://draveness.me/whys-the-design-linux-default-page/)，如果超过这个大小，则会写入临时文件，路径为 `client_body_temp_path` 所配置。
+2. 如果开启缓存，那么 nginx 会不断缓存 body 到内存中，大小为 `client_body_buffer_size` 所指定的大小，默认为两个内存页(曾经只有一个内存页大小)大小 8k(32bit os)/16k(64bit os)，不过这个参数不一定适合现在的硬件了，参考 [为什么 Linux 默认页大小是 4KB](https://draveness.me/whys-the-design-linux-default-page/)，如果超过这个大小，则会写入临时文件，路径为 `client_body_temp_path` 所配置。
 3. 1,2步骤完毕后，开始向后端转发，然后等待后端请求返回
 4. 开始接收 response ，根据 `proxy_buffering` 判断是否需要缓存响应 body，默认为 `on`，即缓存响应
 5. 如果开启缓存，和请求类似的是也有一个 `proxy_buffers` 来决定缓冲区大小，默认 `8 4k`(8 * 4k大小)，当body大于这个buffer时会转储本地文件，文件大小为 `proxy_max_temp_file_size` 限制，每次写入大小为 `proxy_temp_file_write_size`，默认是 `proxy_buffer_size` 和 `proxy_buffers` 之和，当大于临时文件限制时将转为同步传输，同步传输将使用 `proxy_buffers` 定义的空间作为 buffer，同时还有一个 `proxy_busy_buffers_size` 用于控制 buffer 中的哪一部分用于回传给 client,因为传输的过程中，整个 buffer 都将被标记为 busy，不可用，因此为了实现边接边回传的均衡，建议 `proxy_busy_buffers_size` 不要大于 `proxy_buffers` 的一半。
