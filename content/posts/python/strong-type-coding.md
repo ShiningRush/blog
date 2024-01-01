@@ -1,5 +1,5 @@
 +++
-title = "Strong Type Coding"
+title = "Python 强类型编程"
 date = "2023-12-31T09:33:57+08:00"
 author = ""
 authorTwitter = "" #do not include @
@@ -11,7 +11,7 @@ showFullContent = false
 readingTime = false
 +++
 
-# Python 使用强类型开发
+# Python 强类型编程
 python的`dict`类型是我们在开发中很经常使用的，很方便，可以直接对字段寻址
 ```python
 ret = json.load('{"field1": "value"}')
