@@ -78,7 +78,7 @@ echo $$ > /sys/fs/cgroup/cpu/cg1/cgroup.procs
 确定其没有子group后，可以直接删除目录即可。
 
 ## cgroup v2
-在 cgroup v2 中，所有挂载的控制器都会位于一个统一的 hierarchy。虽然不同的控制器可能同时处于 v1 于 v2 下，但是相同的控制器不能同时处于 v1 与 v2 下。
+在 cgroup v2 中，所有挂载的控制器都会位于一个统一的 hierarchy。虽然`不同的`控制器可能同时处于 v1 于 v2 下，但是`相同的`控制器不能同时处于 v1 与 v2 下。
 我们可以通过执行
 ```
 mount | grep cgroup
@@ -159,4 +159,29 @@ cgroup.threads
 ```
 nsdelegate
 memory_localevents
+```
+
+## 查看进程cgroup配置
+通常查看整个系统的cgroup配置，可以直接查看 `/sys/fs/cgroup` 即可，但是我们可以自己创建cgroup节点，systemd也是采用类似的方式，因此要想查看一个进程级别的限制，我们可以通过如下方式：
+1. 查看 `/proc/{pid}/cgroup`，我们可以得到如下的提示：
+```
+10:pids:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399/system.slice/creativecloud.traffic.proxy.service
+9:net_cls,net_prio:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
+8:cpuset:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
+7:memory:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
+6:blkio:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
+5:freezer:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
+4:devices:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
+3:perf_event:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
+2:cpu,cpuacct:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
+1:name=systemd:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399/system.slice/creativecloud.traffic.proxy.service
+0::/
+```
+2. 冒号后的内容即是对应controller的自定义节点，我们可以在
+```
+/sys/fs/cgroup/{controller}/{冒号后内容}
+```
+找到对应的控制节点，以cpuset为例，我们子系统的配置目录位于：
+```
+/sys/fs/cgroup/cpuset/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
 ```

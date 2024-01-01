@@ -85,7 +85,8 @@ go tool pprof -http=:8080 ./xxx.pb.gz
 
 ## 总结
 - heap 只能展示堆上面的内存消耗而不能展示栈，所以当 goroutine 泄露时，你无法通过 heap 定位到
-- 多用 `-base` 来对比不同时间点的增长 
+- 多用 `-base` 来对比不同时间点的增长
+- cgo 所分配的内存没有经过go memory manger，因此不能定位，可以考虑 [bcc](https://github.com/iovisor/bcc) 的 memleak 工具 or valgrind(memcheck), 前者需要内核支持，后者需要使用它来启动，如果内核支持，建议使用 bcc 定位更清楚(c/c++现在更喜欢使用 `The Address Sanitizer(asan)`)
 
 完整格式如下( go1.14.6 )
 ```

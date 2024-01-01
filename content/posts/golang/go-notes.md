@@ -233,3 +233,59 @@ go 里面有两类类型定义：
 
  可以参考：
  [Scheduling In Go : Part II - Go Scheduler](https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html)
+
+## go build 参数
+- asan: 开启asan检测(构建环境要求 `golang >= 1.18, gcc >= 7`)
+- ldflags: 传入到连接器的参数，常用的有 `-w`, `-s`,前者是删除调试信息，后者删除符号连接
+- gcflags: 编译器参数，常用的有 `-gcflags="all=-N -l"` 禁用编译器优化和函数内联，更方便在core文件里面使用 delve or gdb进行调试, `all=-d=checkptr=0`可以关闭禁用指针对齐检测，asan会默认开启这个(正常在 test 的 -race 选项也会开启) (参考[这里](https://go.dev/doc/go1.14))
+
+
+ ## cgo 问题调试
+ - delve 可以看到 golang 的堆栈，gdb 可以看到 c 的堆栈，前提是使用 `CGO_CFLAGS=-g` 环境变量开启符号连接(没有参数设置，只能通过环境变量)。
+ - 
+
+ ## cgo 注意点
+ - 要调查一些c的问题必须要通过coredump来调查，使用 `GOTRACEBACK=crash` 来启用它
+ - cgo 管理的内存模型是基于 C 的，不属于go管理，因此在 delve, pprof等工具中都看不见，同时 cgo 代码中申请的内存如果在 c 代码中没有释放，那么必须要在 go 中调用 free 来释放，在 go 中分配的 C 内存也是如此，典型的比如 `C.CString`
+ - 如果参数可能会在 C 代码中驻留，那么不要在 go代码中释放，否则可能会引起不安全的内存访问，比如以下例子：
+ ```go
+ package main
+
+// #include <stdio.h>
+// #include <stdlib.h>
+//
+// char* text;
+// static void set_config(char* s) {
+//	text = s;
+// }
+// static void myprint() {
+//   printf("%s\n", text);
+// }
+import "C"
+import "unsafe"
+
+func cCall() {
+	cs := C.CString("Hello from stdio")
+	C.set_config(cs)
+	C.free(unsafe.Pointer(cs))
+
+	C.myprint()
+}
+
+func main() {
+	cCall()
+	C.CString("Hello from stdio1")
+	C.myprint()
+}
+
+// Output
+// ??
+// Hello from stdio1
+//
+// 有的时候可能是
+// Hello from stdio
+// Hello from stdio1
+// 上面的结果为什么不相同，是因为内存分配可能会从已经释放的空间去分配，也可能不会。
+// 同时 free 只是标记该内存不再使用，不代表数据会被擦除。
+ ```
+ - 同时golang的堆栈可能会因为扩容和收缩而发生地址变化，因此要注意不要直接传递地址给C（除非对C函数的调用能够在当前函数中完成，而不是在C函数中继续持有它）

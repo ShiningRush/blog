@@ -82,6 +82,9 @@ Tips: 当目标进程卡死在用户态时，strace就没有输出了。
 - `-e trace=process` 控制要跟踪的事件和跟踪行为,比如指定要跟踪的系统调用名称
 
 
+通过 `/proc/<pid>/fd` 可以获取更多信息。
+参考 [How to find more information about the file descriptor?](https://stackoverflow.com/questions/32759078/how-to-find-more-information-about-the-file-descriptor)
+
 ## socat用法小结
 socat有很多用法，但是我只介绍一种：用于监听程序发送往特定 uds(unix domain socket)。
 安装好 socat 后执行以下命令
@@ -111,7 +114,7 @@ mv /path/to/sock.original /path/to/sock
 
 想要确认内核丢弃了多少包可以使用以下命令：
 ```bash
-netstat -s | egrep "listen|LISTEN"
+netstat -s | grep -i "listen"
 ```
 
 确认丢包是由于 `net.ipv4.tcp_tw_recycle` 导致的可以使用:
@@ -123,18 +126,22 @@ netstat -s |grep rejec
 这里要介绍些背景：
 - linux 中 tcp 的握手是由内核来完成的，完成后会将连接放入队列中等待用户程序使用
 - 队列分为两个 半连接( SYN-RCVD )队列 和 全连接( ESTABLISHED )队列，用户程序调用 accept 系统调用时会从全连接队列中读取
-- SYN queue ，长度由 `tcp_max_syn_backlog `和 `net.core.somaxconn `和 业务tcp调用 `listen(fd, backlog)`的 backlog 三者最小值决定
+- SYN queue ，长度由 `tcp_max_syn_backlog `和 `net.core.somaxconn `和 业务tcp调用 `listen(fd, backlog)`的 backlog 三者最小值决定(golang的listen会读取 `somaxconn` 来作为`listen`的参数)
 - ACCEPT queue ， 长度由 `net.core.somaxconn` 和 `listen(fd, backlog)` 的backlog两者最小值决定
 
 Linux 的 Server 在处理 syn 包时的顺序：
-- 检测全连接队列，放入半连接队列，等待 ack
-- 检测全连接队列，从半连接队列中取出，放入全连接队列
+- 接收到 syn 包，放入半连接队列，等待 ack 包，如果队列已满，则丢弃 syn 包，等待客户端重传(由 `tcp_syn_retries` 定义次数上限)，如果客户端达到次数上限 or 触发客户端超时限制，则出现 timeout
+- 放入半连接队列后，内核回复 ack 
+- 接收到 ack 包，放入全连接队列，如果队列已满，则根据 `/proc/sys/net/ipv4/tcp_abort_on_overflow` 来决定是丢失 `SYN包` 还是 回复一个 `RST`，默认值 0 丢弃 `SYN 包`。
+- 如果 ack 包被丢弃，客户端会重传 SYN+ACK 包，直到 `tcp_synack_retries` 的上限 or 触发超时时间。
+(Linux的重传机制都是hardcode在代码中，无法修改，超时时间 RTO-RetransmissionTimeOut 计算遵从RFC6289，defaut=1s, max=120s, min=0.2s，会根据 RTT-RoundTripTime 来动态调整，并且遵从退避算法，参考[Linux tcp](https://elixir.bootlin.com/linux/v3.10.108/source/include/net/tcp.h#L136), [delay-tcp-syn-retransmission-on-linux](https://serverfault.com/questions/1046589/delay-tcp-syn-retransmission-on-linux)
 
 接下来的事情就很容易理解了，比如旧系统的参数设置为 `128`，那么在流量突增的情况下，大于 128 的连接就都会被丢弃掉从而导致客户端超时。
 
-错误信息：
+netstat错误信息：
 - 全连接队列满了：xxx times the listen queue of a socket overflowed
-- 半连接队列满足：xxx SYNs to LISTEN sockets dropped
+- 半连接队列满了：xxx SYNs to LISTEN sockets dropped
+
 
 **使用了 `net.ipv4.tcp_tw_recycle` 功能，并且 client 端做了 NAT**
 通常来说主动断开连接的一方会进入 `TIME_WAIT` 状态（为了处理对端的 FIN 重传报文），等待 2个MSL时间后才会释放，但是如果开启了 `net.ipv4.tcp_tw_recycle` 功能，那么内核会记录每个连接的所携带的时间戳（注意这个功能依赖 `net.ipv4.tcp_timestamps` 开启，开启后双发都会携带一个时间戳，可以便于计算准确的 RoundRripTime, 定义在 RFC1323 ），当同一IP的 syn包时间戳晚于上一次数据包则丢弃，否则直接复用这个socket，通常来说这没什么问题，但是如果 client 使用了 LVS 来转发的话，由于它不会修改数据包的时间戳，并且做了 SNAT，所以在 server 很容易由于不同机器的时间差而触发丢弃。
@@ -179,6 +186,9 @@ sysctl net.ipv4.tcp_fin_timeout
 - FORWARD: 如果数据包是要转发到其他机器的，进入此阶段
 - OUTPUT: 如果数据包由本机发出，进入此阶段
 - POSTROUTING: 当数据包进入网卡之前的最后一个阶段
+
+> **Tips**
+> linux的路由表模块(route or ip route 配置)工作在 Route Decision 阶段
 
 可以看出 `PREROUTING`、`POSTROUTING` 两个阶段是一定会执行的，所以 NAT 操作几乎也都发生在这里， 流程图可以参考：
 ![legacy.png](./images/iptables.png)

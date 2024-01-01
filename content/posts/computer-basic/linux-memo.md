@@ -104,11 +104,22 @@ grep MemTotal /proc/meminfo
 ```
 grep MemFree /proc/meminfo
 ```
+- 查看cpu信息
+```
+top/htop/dstat
+```
+- 查看网卡信息
+```
+watch -n 1 "/sbin/ifconfig eth0 | grep bytes"
+```
 
 ## 常见信息
 系统日志一般位于 `/var/log` 中，
 - 内核日志: `/var/log/dmesg_all`, `/var/log/dmesg`
 - 系统日志： `/var/log/messages`，部分系统 会写入 `/var/adm/messages`
+
+你也可以使用 `dmesg` 命令来读取内核 ring buffer 中的内容，它会在下次启动前输出到 `/var/log/dmesg` 中，因此 `dmesg` 命令更实用
+参考：[Difference between output of dmesg and content of /var/log/dmesg?](https://unix.stackexchange.com/questions/191560/difference-between-output-of-dmesg-and-content-of-var-log-dmesg)
 
 ## 虚拟内存
 进程在操作内存时并不是直接操作物理内存，而是操作系统给进程模拟的 `虚拟内存`，使用这种技术有几个优点：
@@ -146,27 +157,40 @@ systemd 所维护的程序日志可以通过 `journalctl -u xxxx` 指令来查�
 ss -a --unix
 ```
 
-## 查看进程cgroup配置
-通常查看整个系统的cgroup配置，可以直接查看 `/sys/fs/cgroup` 即可，但是我们可以自己创建cgroup节点，systemd也是采用类似的方式，因此要想查看一个进程级别的限制，我们可以通过如下方式：
-1. 查看 `/proc/{pid}/cgroup`，我们可以得到如下的提示：
+## 程序coredump
+Core Dump 又叫核心转储。在程序运行过程中发生异常时，将其内存数据保存到文件中，这个过程叫做 Core Dump。Core是指记忆体也就是现在的内存。
+可以使用
+```shell
+# 查看限制
+ulimit -a
+
+# 打开coredump限制
+ulimit -c unlimited
+
+# 查看路径和格式, 不存在的话默认写到程序所在目ls
+# 如果开头为 | 则把剩余部分视为一个程序，将coredump文件作为标准输入调用
+# 参考ttps://stackoverflow.com/questions/47765202/what-does-mean-in-file-proc-sys-kernel-core-pattern
+cat /proc/sys/kernel/core_pattern
+
+# 控制core文件名是否包含pid，默认为0
+cat /proc/sys/kernel/core_uses_pid
+
+# 分析coredump文件，在gdp中使用 where or bt 来查看崩溃时的信息
+#2  `p $_siginfo` 可以查看具体的 signal information
+#3  `x/i $pc` 查看core执行的汇编指令
+#4  `i r` 查看寄存器值
+gdb -c [core_file] [bin] 
+
 ```
-10:pids:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399/system.slice/creativecloud.traffic.proxy.service
-9:net_cls,net_prio:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
-8:cpuset:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
-7:memory:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
-6:blkio:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
-5:freezer:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
-4:devices:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
-3:perf_event:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
-2:cpu,cpuacct:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
-1:name=systemd:/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399/system.slice/creativecloud.traffic.proxy.service
-0::/
-```
-2. 冒号后的内容即是对应controller的自定义节点，我们可以在
-```
-/sys/fs/cgroup/{controller}/{冒号后内容}
-```
-找到对应的控制节点，以cpuset为例，我们子系统的配置目录位于：
-```
-/sys/fs/cgroup/cpuset/kubepods/burstable/pod2f4f4d51-8f60-4a01-a9e2-3d35e54bf812/124f4cc0cef0835976ed1ad6ac88bae06c5b92b64c3f81f2a3c47de2a0d55399
+
+注意分析coredump文件时可能出现问号，这是由于编译时没有带上符号链接所导致(-g)。不过带上符号链接也有几个风险：
+1. 体积会增大很多
+2. 会泄漏源码（反编译）
+
+因此如果程序运行在不安全的环境，最好是编译额外的map文件来配合分析调查。
+
+## 调查命令
+如果需要查询pipe对端的进程，使用以下命令：
+```bash
+(find /proc -type l | xargs ls -l | fgrep 'pipe:[20043922]') 2>/dev/null
 ```

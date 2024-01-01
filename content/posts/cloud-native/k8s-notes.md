@@ -202,7 +202,7 @@ k8s 为了完善 json patch 的一些问题，提出了 `Strategic Merge Patch`�
 - 灰度
 
 为了支持这些东西，很多大厂都是基于 k8s 包装了更上层的概念来实现服务的发布部署，而社区目前有两个热度比较高的项目来支持这些功能：
-- [flagger](https://github.com/fluxcd/flagger): 属于 fluxcd 项目，和 argoproj 这个组织一样，都是以云原生的方式去推进工具的发展，fluxcd 项目主要聚焦在持续集成与部署上。
+- [flagger](https://github.com/fluxcd/flagger): 属于 fluxcd 项目，和 argoproj 这个组织一样，都是以云原生的方式去推进工具的发展，fluxcd 项目主要聚焦在持续成与部署上。
 - [argo-rollouts](https://github.com/argoproj/argo-rollouts): 上面已经介绍过了，这两个项目和组织的目的都高度相似。
 
 简单来看，flagger支持更多的流量治理工具，而 argo-rollouts 可以很好的和它的CD项目结合。工作原理上没有太大区别，两者都需要使用各自的CRD来替换原生Deployment。
