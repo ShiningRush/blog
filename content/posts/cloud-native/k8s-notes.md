@@ -206,3 +206,69 @@ k8s 为了完善 json patch 的一些问题，提出了 `Strategic Merge Patch`�
 - [argo-rollouts](https://github.com/argoproj/argo-rollouts): 上面已经介绍过了，这两个项目和组织的目的都高度相似。
 
 简单来看，flagger支持更多的流量治理工具，而 argo-rollouts 可以很好的和它的CD项目结合。工作原理上没有太大区别，两者都需要使用各自的CRD来替换原生Deployment。
+
+## OOMKilled
+> 参考[Kubernetes 触发 OOMKilled(内存杀手)如何排除故障](https://bbs.huaweicloud.com/blogs/407156)
+
+可调的/proc/PID/oom_adj可以用来手动调整oom_score。配置该pid进程被oom killer杀掉的权重，oom_adj可以的值从-17到15，其中0表示不改变(默认)，越高的权重，意味着更可能被oom killer选中，-17表示免疫(永远不会杀死)。
+```bash
+[root@ecs-liruilong ~]# cat /proc/1/oom_adj
+0
+```
+
+Kubernetes 在为 Pod 定义服务质量 (QoS) 类时使用该值。有三个 QoS 类可以分配给一个 pod，每个类都有一个匹配的值：`oom_score_adj`
+- Guaranteed(完全可靠的): -997
+- BestEffort(弹性波动、较可靠的): 1000
+- Burstable(尽力而为、不太可靠的): min(max(2, 1000 — (1000 * memoryRequestBytes) / machineMemoryCapacityBytes), 999)
+
+这还会涉及到Linux内存的几个类型：
+- VIRT: 包含了虚拟内存（swap）、堆、栈以及共享内存的所有大小
+- RES：进程正在使用的内存，malloc后已经被赋值的部分
+- SHR：Lib等共享部分所定义的内存
+- DATA：进程的堆、栈总和
+
+>  [容器内存使用量为什么总是在临界点？](https://blog.51cto.com/u_11389430/5251157)
+Linux本身是运行分配的虚拟内存超过物理内存的，可以通过 overcommit 参数来配置，当进程真正访问内存时才会去分配，此时如果不够了会尝试：
+- 内存规整：整理碎片内存、释放PageCahe(缓存页程序读写文件时会把内容留在这里加快IO速度，如果使用DirectIO则不会产生这个)
+- 内存换出：把内存页通过swap out放到文件上
+- OOM：如果以上手段都不行，那么执行OOMKill流程，从 oom_score(/proc/<pid>/oom_score_adj) 分数更高的进程开始kill
+
+cgroup执行OOM的流程不太一样，它是根据 working_set=memory.usage_in_bytes-total_inactive_file (>=0) 来判断的，如果page cache当中还存在可以被逐出的缓存(读文件缓存可以，写的不行，因为在写的场景已经不是cache了，而是buffer，必须要等待写完后才能清理，因此大文件写入的场景如果落盘速度比写入速度慢也会导致内存激增)，那么是不会发生OOM的。
+> 额外信息：memory.usage_in_bytes = memory.kmem.usage_in_bytes + rss + cache
+
+可以通过`memory.stat`来查看cgroup下的内存信息：
+```bash
+cache           - # of bytes of page cache memory. Cached = Active(file) + Inactive(file) + Shmem - Buffers 
+rss             - # of bytes of anonymous and swap cache memory (includes transparent hugepages). #非正真的进程rss
+rss_huge        - # of bytes of anonymous transparent hugepages.
+mapped_file     - # of bytes of mapped file (includes tmpfs/shmem)
+pgpgin          - # of charging events to the memory cgroup. The charging event happens each time a page is accounted as either mapped anon page(RSS) or cache page(Page Cache) to the cgroup.
+pgpgout         - # of uncharging events to the memory cgroup. The uncharging event happens each time a page is unaccounted from the cgroup.
+swap            - # of bytes of swap usage
+dirty           - # of bytes that are waiting to get written back to the disk.
+writeback       - # of bytes of file/anon cache that are queued for syncing to disk.
+inactive_anon    - # of bytes of anonymous and swap cache memory on inactive LRU list.
+active_anon     - # of bytes of anonymous and swap cache memory on active LRU list.
+inactive_file    - # of bytes of file-backed memory on inactive LRU list.
+active_file     - # of bytes of file-backed memory on active LRU list.
+unevictable     - # of bytes of memory that cannot be reclaimed (mlocked etc).
+# 如果是在父cgroup，这是所有的统计
+total_cache 16440213504
+total_rss 68050194432
+total_rss_huge 12941524992
+total_shmem 15949824
+total_mapped_file 40820736
+total_dirty 0
+total_writeback 0
+total_swap 0
+total_bgd_reclaim 0
+total_pgpgin 149854386
+total_pgpgout 132597554
+total_pgfault 482871807
+total_pgmajfault 3663
+total_inactive_anon 15949824
+total_active_anon 68051079168
+total_inactive_file 8873717760
+total_active_file 7548841984
+total_unevictable 0
+```
